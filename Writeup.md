@@ -6,11 +6,64 @@
 
 ## Description
 
+This project is developed based on the simulator provided by Udacity. Due to Corona time, there is an official information that tit will not betested in the real car. For that reason the project is not adapted to the real car testing. The folowing modules are needed to be modified to be able to make the car drive and and react on the traffic lights:
+1) Waypoint updater
+2) Twist controller, which contains both twist controller and drive-by-wire node
+3) Traffic light classification and detection
+
+All other modules are not necessary to be modified to make the project work.
+
 ## Waypoint updater
 
-This node publishes waypoints from the car's current position to the distance ahead. See [waypoint updater](./ros/src/waypoint_updater/waypoint_updater.py).
+This node subscribed to receive the current vehicle position, lane waypoints and traffic waypoints (current situation - it receives the next traffic signal waypoint) and publishes waypoints from the car's current position to the distance ahead. See [waypoint updater](./ros/src/waypoint_updater/waypoint_updater.py).
+
+The following callback receives the traffic waypoint and keep it for calculation the distance to the goal:
+```python
+    def traffic_cb(self, msg):
+        self.stopline_wp_idx = msg.data
+```
+
+The following callback receives the lane waypoints to be able to keep the lane during driving:
+```python
+    def waypoints_cb(self, waypoints):
+        self.base_waypoints = waypoints
+        if not self.waypoints_2d:
+            self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]
+            self.waypoint_tree = KDTree(self.waypoints_2d)
+```
+
+The following callback receives the current vehicle position and keep it for calculation the distance to the goal:
+```python
+    def pose_cb(self, msg):
+        self.pose = msg
+```
+
+When all the data is received the proper route (via waypoints) is generated considering if the traffic light is far away or not and if the decelerating is needed or not (the amount of wapoints considering in front of the car is kept inside ```LOOKAHEAD_WPS``` variable):
+```python
+    def generate_lane(self):
+        lane = Lane()
+
+        closest_idx = self.get_closest_waypoint_idx()
+        farthest_idx = closest_idx + LOOKAHEAD_WPS
+        base_waypoints = self.base_waypoints.waypoints[closest_idx : farthest_idx]
+
+        if self.stopline_wp_idx == -1 or self.stopline_wp_idx >= farthest_idx:
+            lane.waypoints = base_waypoints
+        else:
+            lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
+
+        return lane
+```
 
 ## Drive-by-wire Node (aka DBW) and Twist Controller
+
+### Drive-By-Wire Node
+
+This node represents a drive by wire controller. It receives current and requested steering/velocities, calculates throttle, brake and steering commands and publishes them to the vehicle.
+
+### Twist Controller
+
+This controller is responsible for acceleration and steering. The acceleration is controlled via PID controller. Steering is calculated using YawController which simply calculates needed angle to keep needed velocity.
 
 See [drive-by-wire node](./ros/src/twist_controller/dbw_node.py) and [twist controller](./ros/src/twist_controller/twist_controller.py).
 
@@ -128,6 +181,3 @@ See [drive-by-wire node](./ros/src/twist_controller/dbw_node.py) and [twist cont
     ```
 
     The explained part is not obvious from the code above. So how it works from the code perspective: The module ```Traffic light detector``` is subscribed to the message ```/image_color``` and manipulate with the received data inside the callback ```image_cb(self, msg)```. The nearest (the next one in the vehicle's route) traffic light's state is extracted to be able to understand what colour of traffic light is now. The proper waypoint or -1 is published to ```/traffic_waypoint``` message, which is read inside [waypoint_updater.py](./ros/src/waypoint_updater/waypoint_updater.py) where the further decision regarding keeping the speed or decelerating is triggered. 
-
-## Other modules
-All other modules are not necessary to be modified to make the project work.
