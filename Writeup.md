@@ -98,7 +98,7 @@ See [drive-by-wire node](./ros/src/twist_controller/dbw_node.py) and [twist cont
 
 2) *Detection*. As the ahead waypoints' positions are known and the physical positions of the traffic lights are known as well then the task is splitted into 2 parts:
 
-    a) **Calculate the distance between stop line and the vehicle.** 
+    a) **Calculate the distance between stop line and the vehicle.**
     ```python
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -180,4 +180,4 @@ See [drive-by-wire node](./ros/src/twist_controller/dbw_node.py) and [twist cont
         self.state_count += 1
     ```
 
-    The explained part is not obvious from the code above. So how it works from the code perspective: The module ```Traffic light detector``` is subscribed to the message ```/image_color``` and manipulate with the received data inside the callback ```image_cb(self, msg)```. The nearest (the next one in the vehicle's route) traffic light's state is extracted to be able to understand what colour of traffic light is now. The proper waypoint or -1 is published to ```/traffic_waypoint``` message, which is read inside [waypoint_updater.py](./ros/src/waypoint_updater/waypoint_updater.py) where the further decision regarding keeping the speed or decelerating is triggered. 
+    The explained part is not obvious from the code above. So how it works from the code perspective: The module ```Traffic light detector``` is subscribed to the message ```/image_color``` and manipulate with the received data inside the callback ```image_cb(self, msg)```. The nearest (the next one in the vehicle's route) traffic light's state is extracted to be able to understand what colour of traffic light is now. The proper waypoint or -1 is published to ```/traffic_waypoint``` message, which is read inside [waypoint_updater.py](./ros/src/waypoint_updater/waypoint_updater.py) where the further decision regarding keeping the speed or decelerating is triggered.
